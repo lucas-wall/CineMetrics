@@ -1,0 +1,266 @@
+name: cinemetrics
+
+# Perfis:
+#   (default) storage + processing: minio, minio-setup, postgres, spark, ingestion
+#   streaming     : kafka, event-producer, spark-streaming
+#   orchestration : airflow
+#   api           : fastapi (serving ML, bônus)
+#   monitoring    : prometheus, grafana (bônus)
+
+x-aws-env: &aws-env
+  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-minioadmin}
+  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-minioadmin}
+  AWS_REGION: ${AWS_REGION:-us-east-1}
+
+services:
+
+  # ============================================================== STORAGE
+  minio:
+    image: minio/minio:latest
+    container_name: cinemetrics-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "9000:9000"   # API S3
+      - "9001:9001"   # Console web
+    volumes:
+      - minio-data:/data
+    networks: [cinemetrics]
+
+  minio-setup:
+    image: minio/mc:latest
+    container_name: cinemetrics-minio-setup
+    depends_on: [minio]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} >/dev/null 2>&1; do
+        echo 'aguardando MinIO...'; sleep 2; done;
+      mc mb -p local/bronze local/silver local/gold local/warehouse;
+      echo '>>> buckets do medalhão prontos: bronze, silver, gold, warehouse';
+      mc ls local; exit 0;
+      "
+    networks: [cinemetrics]
+
+  # ====================================================== METADATA / SERVING DB
+  postgres:
+    image: postgres:16
+    container_name: cinemetrics-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cinemetrics}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cinemetrics}
+      POSTGRES_DB: ${POSTGRES_DB:-cinemetrics}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-cinemetrics} -d $${POSTGRES_DB:-cinemetrics}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [cinemetrics]
+
+  # ============================================================== PROCESSING
+  spark:
+    build:
+      context: ./docker/spark
+    image: cinemetrics/spark:3.5.3-delta
+    container_name: cinemetrics-spark
+    env_file: [.env]
+    environment:
+      <<: *aws-env
+    depends_on: [minio]
+    volumes:
+      - ./transformation/spark:/opt/jobs:ro
+      - ./data:/opt/data
+    # Mantém o container vivo; jobs entram via `spark-submit` (docker exec / Airflow).
+    entrypoint: ["/bin/bash", "-lc", "tail -f /dev/null"]
+    networks: [cinemetrics]
+
+  # ============================================================== INGESTION
+  ingestion:
+    build:
+      context: .
+      dockerfile: docker/ingestion/Dockerfile
+    image: cinemetrics/ingestion:latest
+    container_name: cinemetrics-ingestion
+    env_file: [.env]
+    environment:
+      <<: *aws-env
+    depends_on: [minio]
+    volumes:
+      - ./ingestion:/app/ingestion:ro
+      - ./data:/app/data
+      - ./transformation/dbt:/app/dbt
+    entrypoint: ["/bin/sh", "-c", "tail -f /dev/null"]
+    networks: [cinemetrics]
+
+  # ============================================================== STREAMING
+  kafka:
+    image: apache/kafka:latest
+    container_name: cinemetrics-kafka
+    profiles: ["streaming"]
+    ports:
+      - "9094:9094"   # acesso externo (host)
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    networks: [cinemetrics]
+
+  event-producer:
+    image: cinemetrics/ingestion:latest
+    container_name: cinemetrics-event-producer
+    profiles: ["streaming"]
+    env_file: [.env]
+    depends_on: [kafka]
+    command: ["python", "-u", "ingestion/streaming/event_producer.py"]
+    restart: on-failure
+    networks: [cinemetrics]
+
+  spark-streaming:
+    image: cinemetrics/spark:3.5.3-delta
+    container_name: cinemetrics-spark-streaming
+    profiles: ["streaming"]
+    env_file: [.env]
+    environment:
+      <<: *aws-env
+    depends_on: [kafka, minio]
+    volumes:
+      - ./transformation/spark:/opt/jobs:ro
+    command:
+      - /opt/spark/bin/spark-submit
+      - --packages
+      - org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.3
+      - --conf
+      - spark.jars.ivy=/tmp/.ivy2
+      - /opt/jobs/stream_events_to_bronze.py
+    restart: on-failure
+    networks: [cinemetrics]
+
+  # ============================================================== ORCHESTRATION
+  airflow:
+    build:
+      context: ./docker/airflow
+    image: cinemetrics/airflow:2.10.5
+    container_name: cinemetrics-airflow
+    profiles: ["orchestration"]
+    user: "0:0"   # root p/ acessar o docker.sock montado
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER:-cinemetrics}:${POSTGRES_PASSWORD:-cinemetrics}@postgres:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "true"
+      TZ: America/Sao_Paulo
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./orchestration/airflow/dags:/opt/airflow/dags:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command:
+      - bash
+      - -c
+      - |
+        airflow db migrate
+        airflow users create --username admin --password admin \
+          --firstname Data --lastname Eng --role Admin --email admin@cinemetrics.local || true
+        airflow scheduler & exec airflow webserver
+    networks: [cinemetrics]
+
+  # ============================================================== SERVING (BI)
+  metabase:
+    image: metabase/metabase:latest
+    container_name: cinemetrics-metabase
+    profiles: ["serving"]
+    ports:
+      - "3000:3000"
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: metabase
+      MB_DB_PORT: 5432
+      MB_DB_USER: ${POSTGRES_USER:-cinemetrics}
+      MB_DB_PASS: ${POSTGRES_PASSWORD:-cinemetrics}
+      MB_DB_HOST: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [cinemetrics]
+
+  # ============================================================== SERVING (API ML, bônus)
+  api:
+    build:
+      context: ./serving/api
+    image: cinemetrics/api:latest
+    container_name: cinemetrics-api
+    profiles: ["api"]
+    env_file: [.env]
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [cinemetrics]
+
+  # ============================================================== MONITORING (bônus)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: cinemetrics-prometheus
+    profiles: ["monitoring"]
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks: [cinemetrics]
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: cinemetrics-grafana
+    profiles: ["monitoring"]
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    depends_on: [prometheus]
+    networks: [cinemetrics]
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: cinemetrics-postgres-exporter
+    profiles: ["monitoring"]
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-cinemetrics}:${POSTGRES_PASSWORD:-cinemetrics}@postgres:5432/${POSTGRES_DB:-cinemetrics}?sslmode=disable"
+    depends_on: [postgres]
+    networks: [cinemetrics]
+
+networks:
+  cinemetrics:
+    driver: bridge
+
+volumes:
+  minio-data:
+  postgres-data:
+  grafana-data:

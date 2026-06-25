@@ -1,0 +1,10 @@
+version: 2
+
+models:
+  - name: genre_kpis
+    description: "Indicadores por gênero derivados do gold (view dbt na schema marts)."
+    columns:
+      - name: genre
+        tests: [not_null, unique]
+      - name: ratings_por_filme
+        tests: [not_null]

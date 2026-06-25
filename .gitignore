@@ -1,0 +1,36 @@
+# Env / secrets
+.env
+*.local
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.eggs/
+*.egg-info/
+.ipynb_checkpoints/
+
+# Data (local samples / downloads — não versionar dados brutos)
+data/raw/
+data/movielens/
+*.zip
+*.csv.gz
+
+# Spark / Ivy / Delta
+spark-warehouse/
+.ivy2/
+.ivy/
+metastore_db/
+derby.log
+*/checkpoints/
+
+# dbt
+transformation/dbt/target/
+transformation/dbt/dbt_packages/
+transformation/dbt/logs/
+transformation/dbt/.user.yml
+
+# OS
+.DS_Store
+Thumbs.db
