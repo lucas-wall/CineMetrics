@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CineMetrics — Painel de Demonstração</title>
+<style>
+  :root{
+    --bg:#0f1117; --surface:#171a23; --surface2:#1e222e; --line:#2a2f3d;
+    --txt:#e7e9ee; --muted:#9aa3b2; --accent:#6c8cff; --teal:#36c5a8;
+    --amber:#f0a23b; --pink:#e06b9a; --green:#5dc77a;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg);color:var(--txt);line-height:1.5;padding:38px 22px 60px}
+  .wrap{max-width:1080px;margin:0 auto}
+  header{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+  h1{font-size:30px;font-weight:700;letter-spacing:-.5px}
+  h1 .dot{color:var(--accent)}
+  .sub{color:var(--muted);font-size:15px}
+  .stats{display:flex;gap:10px;flex-wrap:wrap;margin:22px 0 26px}
+  .stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;
+    padding:12px 18px;min-width:130px}
+  .stat b{display:block;font-size:22px;font-weight:700}
+  .stat span{color:var(--muted);font-size:12.5px}
+  .pipe{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--surface);
+    border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:28px}
+  .pipe .step{font-size:13.5px;color:var(--txt);background:var(--surface2);
+    border:1px solid var(--line);border-radius:8px;padding:7px 12px;white-space:nowrap}
+  .pipe .arr{color:var(--muted);font-size:15px}
+  h2{font-size:14px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);
+    margin:0 0 14px;font-weight:600}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:20px;display:flex;flex-direction:column;gap:10px;text-decoration:none;color:inherit;
+    transition:transform .12s ease,border-color .12s ease}
+  .card:hover{transform:translateY(-3px);border-color:var(--accent)}
+  .card .tag{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+    padding:3px 9px;border-radius:20px;align-self:flex-start}
+  .card h3{font-size:18px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .card p{color:var(--muted);font-size:13.5px;min-height:38px}
+  .card .open{margin-top:2px;font-size:13.5px;color:var(--accent);font-weight:600}
+  .card .creds{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;
+    color:var(--muted);background:var(--surface2);border:1px solid var(--line);
+    border-radius:7px;padding:6px 9px;word-break:break-all}
+  .star{border-color:var(--accent)}
+  .t-bi{background:rgba(108,140,255,.16);color:#aebeff}
+  .t-orq{background:rgba(54,197,168,.16);color:#7fe7d2}
+  .t-lake{background:rgba(240,162,59,.16);color:#f6c684}
+  .t-api{background:rgba(224,107,154,.16);color:#f2a9c5}
+  .t-mon{background:rgba(93,199,122,.16);color:#9ce0ae}
+  footer{margin-top:34px;padding-top:18px;border-top:1px solid var(--line);
+    color:var(--muted);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  footer a{color:var(--accent);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Cine<span class="dot">Metrics</span></h1>
+    <span class="sub">Painel de Demonstração — Pipeline de Engenharia de Dados</span>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><b>100.836</b><span>ratings reais (MovieLens)</span></div>
+    <div class="stat"><b>9.742</b><span>filmes no catálogo</span></div>
+    <div class="stat"><b>3</b><span>camadas (bronze/silver/gold)</span></div>
+    <div class="stat"><b>8</b><span>ferramentas integradas</span></div>
+  </div>
+
+  <div class="pipe">
+    <span class="step">Fontes (MovieLens + Kafka)</span><span class="arr">&rsaquo;</span>
+    <span class="step">Ingestão</span><span class="arr">&rsaquo;</span>
+    <span class="step">Data Lake (MinIO + Delta)</span><span class="arr">&rsaquo;</span>
+    <span class="step">Spark + dbt</span><span class="arr">&rsaquo;</span>
+    <span class="step">Serving (Metabase + API)</span>
+  </div>
+
+  <h2>Serviços (clique para abrir)</h2>
+  <div class="grid">
+    <a class="card star" href="http://localhost:3000/dashboard/2" target="_blank">
+      <span class="tag t-bi">Consumo / BI</span>
+      <h3>Dashboard (Metabase)</h3>
+      <p>O produto de dados: top filmes, popularidade por gênero e atividade no tempo. Comece a demo por aqui.</p>
+      <span class="open">Abrir dashboard &rarr;</span>
+      <span class="creds">admin@cinemetrics.local · Cinemetrics2026</span>
+    </a>
+
+    <a class="card" href="http://localhost:8080" target="_blank">
+      <span class="tag t-orq">Orquestração</span>
+      <h3>Airflow</h3>
+      <p>O pipeline rodando: DAG ingest → bronze/silver/gold → testes de qualidade. Mostre o grafo verde.</p>
+      <span class="open">Abrir Airflow &rarr;</span>
+      <span class="creds">admin · admin</span>
+    </a>
+
+    <a class="card" href="http://localhost:9001" target="_blank">
+      <span class="tag t-lake">Data Lake</span>
+      <h3>MinIO (S3)</h3>
+      <p>O medalhão em Delta Lake: buckets bronze, silver e gold com os dados em cada camada.</p>
+      <span class="open">Abrir console &rarr;</span>
+      <span class="creds">minioadmin · minioadmin</span>
+    </a>
+
+    <a class="card" href="http://localhost:8000/docs" target="_blank">
+      <span class="tag t-api">Serving / API</span>
+      <h3>FastAPI (Swagger)</h3>
+      <p>Consumo programático do gold: /genres, /top-movies, /activity. Endpoints clicáveis ao vivo.</p>
+      <span class="open">Abrir Swagger &rarr;</span>
+      <span class="creds">sem login</span>
+    </a>
+
+    <a class="card" href="http://localhost:3001" target="_blank">
+      <span class="tag t-mon">Monitoramento</span>
+      <h3>Grafana</h3>
+      <p>Observabilidade: métricas do banco via Prometheus. (Subir só se o perfil monitoring estiver ligado.)</p>
+      <span class="open">Abrir Grafana &rarr;</span>
+      <span class="creds">admin · admin</span>
+    </a>
+  </div>
+
+  <footer>
+    <span>Lucas Leandro Wall Bruno (RA 22251965) · Jamille Rocha Ghazaleh (RA 22304304) — UniCEUB</span>
+    <a href="https://github.com/lucas-wall/cinemetrics" target="_blank">github.com/lucas-wall/cinemetrics</a>
+  </footer>
+</div>
+</body>
+</html>

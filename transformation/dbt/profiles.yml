@@ -1,0 +1,12 @@
+cinemetrics:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('POSTGRES_HOST', 'postgres') }}"
+      port: 5432
+      user: "{{ env_var('POSTGRES_USER', 'cinemetrics') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD', 'cinemetrics') }}"
+      dbname: "{{ env_var('POSTGRES_DB', 'cinemetrics') }}"
+      schema: marts
+      threads: 2
