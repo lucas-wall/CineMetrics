@@ -2,25 +2,25 @@ version: 2
 
 sources:
   - name: gold
-    description: "Camada GOLD materializada pelo Spark (agregados de negócio)."
+    description: "GOLD layer materialized by Spark (business aggregates)."
     schema: gold
     tables:
       - name: movie_metrics
-        description: "Métricas por filme (popularidade, nota média, viewers)."
+        description: "Per-movie metrics (popularity, average rating, viewers)."
         columns:
           - name: n_ratings
             tests: [not_null]
           - name: unique_viewers
             tests: [not_null]
       - name: genre_popularity
-        description: "Popularidade agregada por gênero."
+        description: "Popularity aggregated by genre."
         columns:
           - name: genre
             tests: [not_null, unique]
           - name: n_movies
             tests: [not_null]
       - name: ratings_over_time
-        description: "Atividade mensal (ratings e usuários ativos)."
+        description: "Monthly activity (ratings and active users)."
         columns:
           - name: month
             tests: [not_null, unique]

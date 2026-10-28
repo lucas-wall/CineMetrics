@@ -1,9 +1,9 @@
 """
-DAG CineMetrics — orquestração do pipeline batch (medalhão).
+CineMetrics DAG — orchestration of the batch (medallion) pipeline.
 
-Encadeia: ingestão (MovieLens -> bronze) -> bronze->silver -> silver->gold
--> testes de qualidade (dbt). As tarefas são executadas via `docker exec` nos
-containers de ingestão/Spark (o Airflow tem o CLI do Docker + o socket montado).
+Chains: ingestion (MovieLens -> bronze) -> bronze->silver -> silver->gold
+-> data quality tests (dbt). Tasks run via `docker exec` in the
+ingestion/Spark containers (Airflow has the Docker CLI + the mounted socket).
 """
 from datetime import datetime, timedelta
 
@@ -19,12 +19,12 @@ default_args = {
 
 with DAG(
     dag_id="cinemetrics_pipeline",
-    description="Ciclo de vida CineMetrics: ingestão -> medalhão -> qualidade",
+    description="CineMetrics lifecycle: ingestion -> medallion -> quality",
     schedule="@daily",
     start_date=datetime(2026, 6, 1),
     catchup=False,
     default_args=default_args,
-    tags=["cinemetrics", "engenharia-de-dados"],
+    tags=["cinemetrics", "data-engineering"],
 ) as dag:
 
     start = EmptyOperator(task_id="start")

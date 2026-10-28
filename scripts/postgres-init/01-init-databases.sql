@@ -1,9 +1,9 @@
--- Inicialização do Postgres (roda 1x na primeira subida, volume vazio).
--- Cria os bancos auxiliares e o schema da camada GOLD.
+-- Postgres initialization (runs once on first startup, empty volume).
+-- Creates the auxiliary databases and the GOLD layer schema.
 
-CREATE DATABASE airflow;    -- metadados do Airflow (orquestração)
-CREATE DATABASE metabase;   -- app database do Metabase (serving/BI)
+CREATE DATABASE airflow;    -- Airflow metadata (orchestration)
+CREATE DATABASE metabase;   -- Metabase app database (serving/BI)
 
 \connect cinemetrics
 CREATE SCHEMA IF NOT EXISTS gold;
-COMMENT ON SCHEMA gold IS 'Camada GOLD servida ao Metabase (agregados de negócio).';
+COMMENT ON SCHEMA gold IS 'GOLD layer served to Metabase (business aggregates).';

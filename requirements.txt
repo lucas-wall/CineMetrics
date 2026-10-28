@@ -1,5 +1,5 @@
-# Dependências Python para ingestão, producer e utilidades (host venv ou containers).
-# Spark/Delta vêm da imagem Docker; aqui só o que roda fora do cluster.
+# Python dependencies for ingestion, producer and utilities (host venv or containers).
+# Spark/Delta come from the Docker image; only what runs outside the cluster is listed here.
 requests==2.32.3
 boto3==1.35.76
 python-dotenv==1.0.1

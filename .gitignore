@@ -11,7 +11,7 @@ venv/
 *.egg-info/
 .ipynb_checkpoints/
 
-# Data (local samples / downloads — não versionar dados brutos)
+# Data (local samples / downloads — do not version raw data)
 data/raw/
 data/movielens/
 *.zip

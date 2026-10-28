@@ -1,10 +1,10 @@
 """
 SILVER -> GOLD.
 
-Calcula os agregados de negócio (Delta na camada GOLD) e PUBLICA as tabelas
-prontas no Postgres (schema gold) para consumo pelo Metabase.
+Computes the business aggregates (Delta in the GOLD layer) and PUBLISHES the
+ready-made tables to Postgres (gold schema) for consumption by Metabase.
 
-GOLD = tabelas prontas para BI/ML, agregações pré-calculadas.
+GOLD = tables ready for BI/ML, pre-computed aggregations.
 """
 import os
 from pyspark.sql import SparkSession, functions as F
@@ -18,7 +18,7 @@ PG_PASS = os.getenv("POSTGRES_PASSWORD", "cinemetrics")
 
 
 def to_postgres(df, table):
-    """Publica um DataFrame na tabela gold.<table> do Postgres (serving)."""
+    """Publishes a DataFrame to the Postgres gold.<table> table (serving)."""
     (df.write.format("jdbc")
         .option("url", PG_URL)
         .option("dbtable", f"gold.{table}")
@@ -26,7 +26,7 @@ def to_postgres(df, table):
         .option("password", PG_PASS)
         .option("driver", "org.postgresql.Driver")
         .mode("overwrite").save())
-    print(f"[gold->postgres] gold.{table} publicado", flush=True)
+    print(f"[gold->postgres] gold.{table} published", flush=True)
 
 
 def main():
@@ -36,7 +36,7 @@ def main():
     movies = spark.read.format("delta").load(f"{SILVER}/movies")
     ratings = spark.read.format("delta").load(f"{SILVER}/ratings")
 
-    # ---------- GOLD 1: métricas por filme ----------
+    # ---------- GOLD 1: per-movie metrics ----------
     movie_metrics = (
         ratings.groupBy("movieId").agg(
             F.count("*").alias("n_ratings"),
@@ -47,18 +47,18 @@ def main():
     )
     movie_metrics.write.format("delta").mode("overwrite").save(f"{GOLD}/movie_metrics")
 
-    # versão "achatada" p/ Postgres (sem arrays)
+    # "flattened" version for Postgres (no arrays)
     movie_metrics_pg = movie_metrics.withColumn(
         "genres", F.concat_ws(", ", "genres_arr")
     ).drop("genres_arr")
     to_postgres(movie_metrics_pg, "movie_metrics")
 
-    # ---------- GOLD 2: popularidade por gênero ----------
+    # ---------- GOLD 2: popularity by genre ----------
     exploded = movie_metrics.withColumn("genre", F.explode("genres_arr"))
     genre_pop = (
         exploded.groupBy("genre").agg(
             F.sum("n_ratings").alias("total_ratings"),
-            # média ponderada pelo nº de ratings de cada filme
+            # average weighted by each movie's number of ratings
             F.round(F.sum(F.col("avg_rating") * F.col("n_ratings")) / F.sum("n_ratings"), 3).alias("avg_rating"),
             F.count("*").alias("n_movies"),
         )
@@ -67,7 +67,7 @@ def main():
     genre_pop.write.format("delta").mode("overwrite").save(f"{GOLD}/genre_popularity")
     to_postgres(genre_pop, "genre_popularity")
 
-    # ---------- GOLD 3: atividade ao longo do tempo (mensal) ----------
+    # ---------- GOLD 3: activity over time (monthly) ----------
     ratings_time = (
         ratings.withColumn("month", F.date_format("event_time", "yyyy-MM"))
         .groupBy("month").agg(
@@ -80,7 +80,7 @@ def main():
     ratings_time.write.format("delta").mode("overwrite").save(f"{GOLD}/ratings_over_time")
     to_postgres(ratings_time, "ratings_over_time")
 
-    # ---------- GOLD 4: top 20 filmes (popularidade) ----------
+    # ---------- GOLD 4: top 20 movies (popularity) ----------
     top_movies = (
         movie_metrics_pg.filter(F.col("n_ratings") >= 20)
         .orderBy(F.desc("n_ratings"))

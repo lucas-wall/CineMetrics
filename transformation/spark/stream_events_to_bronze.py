@@ -1,11 +1,11 @@
 """
-STREAMING: Kafka 'streaming_events' -> BRONZE (raw) + SILVER (janela 5 min).
+STREAMING: Kafka 'streaming_events' -> BRONZE (raw) + SILVER (5-min window).
 
-Spark Structured Streaming consome os eventos do player publicados no Kafka,
-grava o cru em Delta no BRONZE e mantém um agregado em janela de 5 min no SILVER
-(plays por filme), demonstrando o caminho de tempo real do pipeline.
+Spark Structured Streaming consumes the player events published to Kafka,
+writes the raw data as Delta in BRONZE and maintains a 5-minute windowed
+aggregate in SILVER (plays per movie), demonstrating the pipeline's real-time path.
 
-Submetido com o pacote spark-sql-kafka (resolvido via --packages no compose).
+Submitted with the spark-sql-kafka package (resolved via --packages in compose).
 """
 import os
 from pyspark.sql import SparkSession, functions as F, types as T
@@ -47,7 +47,7 @@ def main():
         .withColumn("ingest_date", F.current_date())
     )
 
-    # BRONZE: eventos crus (append contínuo)
+    # BRONZE: raw events (continuous append)
     q_bronze = (
         events.writeStream.format("delta")
         .outputMode("append")
@@ -56,7 +56,7 @@ def main():
         .start(f"{BRONZE}/streaming_events")
     )
 
-    # SILVER: janela de 5 min — plays por filme (watermark p/ estado limitado)
+    # SILVER: 5-min window — plays per movie (watermark to bound state)
     windowed = (
         events.filter(F.col("event_type") == "play")
         .withWatermark("event_time", "10 minutes")
@@ -75,7 +75,7 @@ def main():
         .start(f"{SILVER}/events_windowed")
     )
 
-    print(f"[streaming] consumindo {TOPIC}@{KAFKA} -> bronze/streaming_events + silver/events_windowed", flush=True)
+    print(f"[streaming] consuming {TOPIC}@{KAFKA} -> bronze/streaming_events + silver/events_windowed", flush=True)
     spark.streams.awaitAnyTermination()
 
 

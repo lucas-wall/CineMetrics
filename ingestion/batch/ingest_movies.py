@@ -1,12 +1,12 @@
 """
-Ingestão BATCH do catálogo CineMetrics → camada BRONZE (raw).
+BATCH ingestion of the CineMetrics catalog → BRONZE layer (raw).
 
-Fonte primária: MovieLens (GroupLens) — filmes + ratings + tags + links REAIS.
-Se TMDB_API_KEY estiver definido no .env, enriquece uma amostra com metadados
-oficiais do TMDb (mantendo o espírito "TMDb real" do plano da Parte 1).
+Primary source: MovieLens (GroupLens) — REAL movies + ratings + tags + links.
+If TMDB_API_KEY is set in .env, a sample is enriched with official TMDb
+metadata (keeping the "real TMDb" intent of the Part 1 plan).
 
-A camada BRONZE preserva o formato original dos dados (CSV/JSON), sem
-transformação — conforme a arquitetura Medalhão.
+The BRONZE layer preserves the original data format (CSV/JSON), with no
+transformation — as defined by the Medallion architecture.
 """
 import os
 import sys
@@ -33,7 +33,7 @@ def download_movielens(dest_dir):
     url = MOVIELENS_URL.format(ds=DATASET)
     zpath = os.path.join(dest_dir, f"{DATASET}.zip")
     if not os.path.exists(zpath):
-        log(f"baixando dataset real: {url}")
+        log(f"downloading real dataset: {url}")
         urllib.request.urlretrieve(url, zpath)
     with zipfile.ZipFile(zpath) as z:
         z.extractall(dest_dir)
@@ -41,7 +41,7 @@ def download_movielens(dest_dir):
 
 
 def enrich_tmdb(client, base, sample=50):
-    """Enriquecimento opcional com a API do TMDb (se houver key)."""
+    """Optional enrichment with the TMDb API (if a key is set)."""
     import csv
     links = os.path.join(base, "links.csv")
     out = []
@@ -57,10 +57,10 @@ def enrich_tmdb(client, base, sample=50):
                 with urllib.request.urlopen(url, timeout=10) as r:
                     out.append(json.loads(r.read()))
             except Exception as e:  # noqa: BLE001
-                log(f"tmdb {tmdb_id} falhou: {e}")
+                log(f"tmdb {tmdb_id} failed: {e}")
     put_bytes(client, BRONZE, "tmdb/movies_enriched.json",
               json.dumps(out).encode(), "application/json")
-    log(f"TMDb: {len(out)} filmes enriquecidos -> s3://{BRONZE}/tmdb/")
+    log(f"TMDb: {len(out)} movies enriched -> s3://{BRONZE}/tmdb/")
 
 
 def main():
@@ -73,29 +73,29 @@ def main():
     for f in files:
         path = os.path.join(base, f)
         if not os.path.exists(path):
-            log(f"AVISO: {f} ausente no dataset")
+            log(f"WARNING: {f} missing from dataset")
             continue
         name = f[:-4]
         key = f"movielens/{name}/{f}"
         put_file(client, BRONZE, key, path)
         with open(path, encoding="utf-8") as fh:
-            n = sum(1 for _ in fh) - 1  # menos o header
+            n = sum(1 for _ in fh) - 1  # minus the header
         counts[name] = n
-        log(f"-> s3://{BRONZE}/{key}  ({n} linhas)")
+        log(f"-> s3://{BRONZE}/{key}  ({n} rows)")
 
     source = "movielens"
     if TMDB_KEY:
         source = "movielens+tmdb"
         enrich_tmdb(client, base)
     else:
-        log("TMDB_API_KEY vazio -> fonte = MovieLens (real). Fallback documentado no As-Built.")
+        log("TMDB_API_KEY empty -> source = MovieLens (real). Fallback documented in the As-Built.")
 
     manifest = {"source": source, "dataset": DATASET,
                 "ingested_at": ts, "row_counts": counts}
     put_bytes(client, BRONZE, "movielens/_manifest.json",
               json.dumps(manifest, indent=2).encode(), "application/json")
-    log(f"manifesto -> s3://{BRONZE}/movielens/_manifest.json  {manifest}")
-    log("ingestão BATCH concluída ✅")
+    log(f"manifest -> s3://{BRONZE}/movielens/_manifest.json  {manifest}")
+    log("BATCH ingestion complete ✅")
 
 
 if __name__ == "__main__":

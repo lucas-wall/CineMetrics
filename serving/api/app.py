@@ -1,8 +1,8 @@
 """
-CineMetrics API (FastAPI) — serving da camada GOLD.
+CineMetrics API (FastAPI) — GOLD layer serving.
 
-Expõe os agregados de negócio prontos (camada gold no Postgres) via REST,
-demonstrando o consumo programático do pipeline (além do BI no Metabase).
+Exposes the ready-made business aggregates (gold layer in Postgres) via REST,
+showing programmatic consumption of the pipeline (in addition to BI in Metabase).
 """
 import os
 import psycopg2
@@ -11,7 +11,7 @@ from fastapi import FastAPI, HTTPException
 
 app = FastAPI(
     title="CineMetrics API",
-    description="Serving da camada gold do pipeline CineMetrics.",
+    description="Serving of the CineMetrics pipeline gold layer.",
     version="1.0.0",
 )
 
@@ -43,7 +43,7 @@ def health():
 
 @app.get("/genres")
 def genres():
-    """Popularidade por gênero (gold.genre_popularity)."""
+    """Popularity by genre (gold.genre_popularity)."""
     return query(
         "SELECT genre, total_ratings, avg_rating, n_movies "
         "FROM gold.genre_popularity ORDER BY total_ratings DESC"
@@ -52,7 +52,7 @@ def genres():
 
 @app.get("/top-movies")
 def top_movies(limit: int = 10):
-    """Top filmes por popularidade (gold.movie_metrics)."""
+    """Top movies by popularity (gold.movie_metrics)."""
     return query(
         "SELECT title_clean, n_ratings, avg_rating, unique_viewers "
         "FROM gold.movie_metrics ORDER BY n_ratings DESC LIMIT %s",
@@ -62,7 +62,7 @@ def top_movies(limit: int = 10):
 
 @app.get("/activity")
 def activity():
-    """Atividade mensal (gold.ratings_over_time)."""
+    """Monthly activity (gold.ratings_over_time)."""
     return query(
         "SELECT month, n_ratings, active_users "
         "FROM gold.ratings_over_time ORDER BY month"

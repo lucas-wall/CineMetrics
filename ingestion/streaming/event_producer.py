@@ -1,8 +1,8 @@
 """
-Producer de eventos de streaming sintéticos (play/pause/stop/seek/complete/buffer).
+Synthetic streaming event producer (play/pause/stop/seek/complete/buffer).
 
-Simula o player do CineMetrics publicando eventos JSON no tópico Kafka
-'streaming_events'. É a fonte de dados em TEMPO REAL do pipeline.
+Simulates the CineMetrics player by publishing JSON events to the Kafka topic
+'streaming_events'. It is the REAL-TIME data source of the pipeline.
 """
 import os
 import json
@@ -27,8 +27,8 @@ QUALITIES = ["480p", "720p", "1080p", "4k"]
 def make_event():
     return {
         "event_id": fake.uuid4(),
-        "user_id": f"U{random.randint(1, 610)}",       # userId range do ml-latest-small
-        "movie_id": random.randint(1, 193609),          # movieId range do ml-latest-small
+        "user_id": f"U{random.randint(1, 610)}",       # ml-latest-small userId range
+        "movie_id": random.randint(1, 193609),          # ml-latest-small movieId range
         "event_type": random.choices(EVENT_TYPES, weights=EVENT_WEIGHTS)[0],
         "timestamp": dt.datetime.utcnow().isoformat() + "Z",
         "device": random.choice(DEVICES),
@@ -49,12 +49,12 @@ def main():
             )
             break
         except Exception as e:  # noqa: BLE001
-            print(f"[producer] kafka indisponível ({e}); tentativa {attempt}/30", flush=True)
+            print(f"[producer] kafka unavailable ({e}); attempt {attempt}/30", flush=True)
             time.sleep(3)
     if producer is None:
-        raise SystemExit("[producer] não conectou ao Kafka")
+        raise SystemExit("[producer] could not connect to Kafka")
 
-    print(f"[producer] enviando ~{EPS} ev/s para {BOOT} topic={TOPIC}", flush=True)
+    print(f"[producer] sending ~{EPS} ev/s to {BOOT} topic={TOPIC}", flush=True)
     sent = 0
     while True:
         for _ in range(EPS):
@@ -62,7 +62,7 @@ def main():
             sent += 1
         producer.flush()
         if sent % (EPS * 5) == 0:
-            print(f"[producer] {sent} eventos enviados", flush=True)
+            print(f"[producer] {sent} events sent", flush=True)
         time.sleep(1)
 
 

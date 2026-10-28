@@ -29,7 +29,7 @@
     {
       "id": 2,
       "type": "stat",
-      "title": "Conexoes ativas",
+      "title": "Active connections",
       "gridPos": { "h": 6, "w": 8, "x": 8, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [ { "expr": "sum(pg_stat_database_numbackends)", "refId": "A" } ]
@@ -37,7 +37,7 @@
     {
       "id": 3,
       "type": "timeseries",
-      "title": "Transacoes por segundo (commits)",
+      "title": "Transactions per second (commits)",
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 6 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [ { "expr": "sum(rate(pg_stat_database_xact_commit[1m]))", "refId": "A" } ]

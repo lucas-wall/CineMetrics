@@ -1,11 +1,11 @@
-# Imagem Spark + Delta Lake + S3A (MinIO) + JDBC Postgres, fixada em Spark 3.5.3.
-# Jars baixados em build-time (offline em runtime), casados com:
+# Spark + Delta Lake + S3A (MinIO) + Postgres JDBC image, pinned to Spark 3.5.3.
+# Jars downloaded at build time (offline at runtime), matched with:
 #   Spark 3.5.3 / Scala 2.12 / Hadoop 3.3.4
 FROM apache/spark:3.5.3
 
 USER root
 
-# Delta Lake + conector S3A + driver JDBC do Postgres (serving do gold).
+# Delta Lake + S3A connector + Postgres JDBC driver (gold serving).
 RUN set -eux; cd /opt/spark/jars; python3 - <<'PY'
 import urllib.request
 M = "https://repo1.maven.org/maven2"
@@ -18,7 +18,7 @@ jars = [
 ]
 for u in jars:
     fn = u.rsplit("/", 1)[1]
-    print("baixando", fn, flush=True)
+    print("downloading", fn, flush=True)
     urllib.request.urlretrieve(u, fn)
 print("jars Delta/S3A/JDBC ok")
 PY

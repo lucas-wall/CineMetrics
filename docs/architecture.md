@@ -1,40 +1,40 @@
-# CineMetrics — Arquitetura (detalhe técnico)
+# CineMetrics — Architecture (technical detail)
 
-Complemento ao [README](../README.md). Foca nas decisões de engenharia que sustentam o "As-Built".
+Companion to the [README](../README.md). Focuses on the engineering decisions behind the "As-Built" implementation.
 
-## Fluxo de dados ponta a ponta
+## End-to-end data flow
 
-1. **Batch** — `ingest_movies.py` baixa o MovieLens (filmes, ratings, tags, links), grava o cru no **BRONZE** (MinIO). Se `TMDB_API_KEY` existir, enriquece com a API do TMDb.
-2. **Streaming** — `event_producer.py` publica eventos de player (play/pause/stop/seek/complete) no tópico Kafka `streaming_events`. O job `stream_events_to_bronze.py` (Spark Structured Streaming) consome e grava em Delta no **BRONZE**, com agregação em janela de 5 min no **SILVER**.
-3. **Medalhão (Spark)** — `bronze_to_silver.py` limpa/tipa/deduplica → **SILVER** (Delta). `silver_to_gold.py` calcula os agregados → **GOLD** (Delta) e publica no Postgres (serving).
-4. **Marts/Qualidade (dbt)** — `genre_kpis` (view) + 11 testes (`not_null`, `unique`) sobre o gold.
-5. **Serving** — Metabase (dashboard) e FastAPI leem o gold no Postgres.
-6. **Orquestração** — Airflow encadeia 1→3→4 (DAG `cinemetrics_pipeline`, `@daily`).
-7. **Observabilidade** — Prometheus (postgres-exporter) + Grafana.
+1. **Batch** — `ingest_movies.py` downloads MovieLens (movies, ratings, tags, links) and writes the raw files to **BRONZE** (MinIO). If `TMDB_API_KEY` is set, it enriches the data with the TMDb API.
+2. **Streaming** — `event_producer.py` publishes player events (play/pause/stop/seek/complete) to the Kafka topic `streaming_events`. The `stream_events_to_bronze.py` job (Spark Structured Streaming) consumes them and writes Delta to **BRONZE**, with a 5-minute windowed aggregate in **SILVER**.
+3. **Medallion (Spark)** — `bronze_to_silver.py` cleans/casts/deduplicates → **SILVER** (Delta). `silver_to_gold.py` computes the aggregates → **GOLD** (Delta) and publishes them to Postgres (serving).
+4. **Marts/Quality (dbt)** — `genre_kpis` (view) + 11 tests (`not_null`, `unique`) on the gold layer.
+5. **Serving** — Metabase (dashboard) and FastAPI read the gold layer from Postgres.
+6. **Orchestration** — Airflow chains 1→3→4 (DAG `cinemetrics_pipeline`, `@daily`).
+7. **Observability** — Prometheus (postgres-exporter) + Grafana.
 
-## Por que Lakehouse + Medalhão
+## Why Lakehouse + Medallion
 
-Delta Lake sobre MinIO (S3) dá **ACID, time travel e schema enforcement** sobre object storage barato — combina batch e streaming no mesmo armazenamento. O medalhão separa responsabilidades: bronze (raw/auditável), silver (confiável), gold (consumível).
+Delta Lake on MinIO (S3) provides **ACID transactions, time travel and schema enforcement** on cheap object storage, combining batch and streaming in the same storage layer. The medallion pattern separates responsibilities: bronze (raw/auditable), silver (trusted), gold (consumable).
 
-## Decisões técnicas relevantes
+## Key technical decisions
 
-- **Spark 3.5.3 (Scala 2.12, Hadoop 3.3.4, JDK 11):** versão alinhada a Delta 3.2.1 e ao conector `hadoop-aws` 3.3.4 (s3a). Jars baixados em build-time (offline em runtime).
-- **Credenciais S3 por ambiente:** `EnvironmentVariableCredentialsProvider` (sem segredo na imagem).
-- **Kafka em modo KRaft:** sem ZooKeeper — um container a menos, menos RAM.
-- **gold em Delta *e* Postgres:** Delta = camada analítica/auditável; Postgres = serving de baixa latência p/ BI/API.
-- **Airflow via `docker exec`:** o container tem o CLI do Docker + o socket montado; as tasks rodam nos containers de ingestão/Spark (sem reempacotar dependências no Airflow).
-- **Perfis Compose:** `core` sempre; `streaming`, `orchestration`, `serving`, `api`, `monitoring` sob demanda — cabe em 16 GB subindo só o necessário.
+- **Spark 3.5.3 (Scala 2.12, Hadoop 3.3.4, JDK 11):** version aligned with Delta 3.2.1 and the `hadoop-aws` 3.3.4 connector (s3a). Jars are downloaded at build time (offline at runtime).
+- **S3 credentials from the environment:** `EnvironmentVariableCredentialsProvider` (no secrets baked into the image).
+- **Kafka in KRaft mode:** no ZooKeeper, one less container and less RAM.
+- **Gold in Delta *and* Postgres:** Delta = analytical/auditable layer; Postgres = low-latency serving for BI/API.
+- **Airflow via `docker exec`:** the container has the Docker CLI + the mounted socket; tasks run inside the ingestion/Spark containers (no need to repackage dependencies into Airflow).
+- **Compose profiles:** `core` always on; `streaming`, `orchestration`, `serving`, `api`, `monitoring` on demand, so it fits in 16 GB by starting only what is needed.
 
-## Políticas de retenção (governança)
+## Retention policies (governance)
 
-| Camada | Retenção |
+| Layer | Retention |
 |---|---|
-| BRONZE | 90 dias (raw) |
-| SILVER | 2 anos |
-| GOLD | indefinido |
+| BRONZE | 90 days (raw) |
+| SILVER | 2 years |
+| GOLD | indefinite |
 
-## Limitações conhecidas (protótipo)
+## Known limitations (prototype)
 
-- Spark roda em modo local (`local[*]`), não em cluster — suficiente p/ o volume do MovieLens.
-- A janela de 5 min do streaming só materializa no silver após o fechamento da janela + watermark.
-- Métricas de Spark/Kafka no Prometheus exigiriam exporters adicionais (fora do escopo do protótipo).
+- Spark runs in local mode (`local[*]`), not on a cluster, which is enough for the MovieLens volume.
+- The 5-minute streaming window only materializes in silver after the window closes + the watermark.
+- Spark/Kafka metrics in Prometheus would require additional exporters (out of scope for the prototype).

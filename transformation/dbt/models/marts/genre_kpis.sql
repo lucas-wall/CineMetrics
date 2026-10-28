@@ -1,5 +1,5 @@
--- KPIs por gênero (camada de MARTS via dbt, sobre o GOLD materializado pelo Spark).
--- Demonstra transformação versionada + testada no ciclo de vida.
+-- KPIs by genre (MARTS layer via dbt, on top of the GOLD layer materialized by Spark).
+-- Demonstrates a versioned + tested transformation in the lifecycle.
 select
     genre,
     total_ratings,

@@ -1,10 +1,10 @@
 """
 BRONZE -> SILVER (batch).
 
-Lê os CSVs crus do catálogo (MovieLens) na camada BRONZE (S3A/MinIO),
-limpa/tipa/deduplica e grava tabelas Delta na camada SILVER.
+Reads the raw catalog CSVs (MovieLens) from the BRONZE layer (S3A/MinIO),
+cleans/casts/deduplicates them and writes Delta tables to the SILVER layer.
 
-SILVER = dados limpos, conformados, com schema enforcement (Delta).
+SILVER = clean, conformed data with schema enforcement (Delta).
 """
 from pyspark.sql import SparkSession, functions as F
 
@@ -16,7 +16,7 @@ def main():
     spark = (SparkSession.builder.appName("bronze_to_silver").getOrCreate())
     spark.sparkContext.setLogLevel("WARN")
 
-    # ---------- MOVIES (catálogo) ----------
+    # ---------- MOVIES (catalog) ----------
     movies = (
         spark.read.option("header", True).csv(f"{BRONZE}/movielens/movies/movies.csv")
         .withColumn("movieId", F.col("movieId").cast("int"))
@@ -29,7 +29,7 @@ def main():
     )
     movies.write.format("delta").mode("overwrite").save(f"{SILVER}/movies")
 
-    # ---------- RATINGS (interações reais) ----------
+    # ---------- RATINGS (real interactions) ----------
     ratings = (
         spark.read.option("header", True).csv(f"{BRONZE}/movielens/ratings/ratings.csv")
         .withColumn("userId", F.col("userId").cast("int"))
@@ -49,7 +49,7 @@ def main():
     )
     links.write.format("delta").mode("overwrite").save(f"{SILVER}/links")
 
-    # ---------- USERS (derivados dos ratings) ----------
+    # ---------- USERS (derived from ratings) ----------
     users = (
         ratings.groupBy("userId").agg(
             F.count("*").alias("n_ratings"),
@@ -62,7 +62,7 @@ def main():
 
     for t in ["movies", "ratings", "links", "users"]:
         c = spark.read.format("delta").load(f"{SILVER}/{t}").count()
-        print(f"[silver] {t}: {c} linhas", flush=True)
+        print(f"[silver] {t}: {c} rows", flush=True)
     print("BRONZE->SILVER ok ✅", flush=True)
     spark.stop()
 

@@ -1,11 +1,11 @@
-"""Helpers de acesso ao Data Lake (MinIO / S3) via boto3."""
+"""Data Lake (MinIO / S3) access helpers via boto3."""
 import os
 import boto3
 from botocore.client import Config
 
 
 def s3_client():
-    """Cliente S3 apontando para o MinIO (path-style, credenciais do ambiente)."""
+    """S3 client pointing to MinIO (path-style, credentials from the environment)."""
     return boto3.client(
         "s3",
         endpoint_url=os.getenv("S3_ENDPOINT", "http://minio:9000"),

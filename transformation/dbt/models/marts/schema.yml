@@ -2,7 +2,7 @@ version: 2
 
 models:
   - name: genre_kpis
-    description: "Indicadores por gênero derivados do gold (view dbt na schema marts)."
+    description: "Genre-level indicators derived from gold (dbt view in the marts schema)."
     columns:
       - name: genre
         tests: [not_null, unique]

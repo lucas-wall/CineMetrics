@@ -1,11 +1,11 @@
 name: cinemetrics
 
-# Perfis:
+# Profiles:
 #   (default) storage + processing: minio, minio-setup, postgres, spark, ingestion
 #   streaming     : kafka, event-producer, spark-streaming
 #   orchestration : airflow
-#   api           : fastapi (serving ML, bônus)
-#   monitoring    : prometheus, grafana (bônus)
+#   api           : fastapi (ML serving, bonus)
+#   monitoring    : prometheus, grafana (bonus)
 
 x-aws-env: &aws-env
   AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-minioadmin}
@@ -24,7 +24,7 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
     ports:
       - "9000:9000"   # API S3
-      - "9001:9001"   # Console web
+      - "9001:9001"   # Web console
     volumes:
       - minio-data:/data
     networks: [cinemetrics]
@@ -39,9 +39,9 @@ services:
     entrypoint: >
       /bin/sh -c "
       until mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} >/dev/null 2>&1; do
-        echo 'aguardando MinIO...'; sleep 2; done;
+        echo 'waiting for MinIO...'; sleep 2; done;
       mc mb -p local/bronze local/silver local/gold local/warehouse;
-      echo '>>> buckets do medalhão prontos: bronze, silver, gold, warehouse';
+      echo '>>> medallion buckets ready: bronze, silver, gold, warehouse';
       mc ls local; exit 0;
       "
     networks: [cinemetrics]
@@ -79,7 +79,7 @@ services:
     volumes:
       - ./transformation/spark:/opt/jobs:ro
       - ./data:/opt/data
-    # Mantém o container vivo; jobs entram via `spark-submit` (docker exec / Airflow).
+    # Keeps the container alive; jobs are submitted via `spark-submit` (docker exec / Airflow).
     entrypoint: ["/bin/bash", "-lc", "tail -f /dev/null"]
     networks: [cinemetrics]
 
@@ -107,7 +107,7 @@ services:
     container_name: cinemetrics-kafka
     profiles: ["streaming"]
     ports:
-      - "9094:9094"   # acesso externo (host)
+      - "9094:9094"   # external access (host)
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
@@ -161,7 +161,7 @@ services:
     image: cinemetrics/airflow:2.10.5
     container_name: cinemetrics-airflow
     profiles: ["orchestration"]
-    user: "0:0"   # root p/ acessar o docker.sock montado
+    user: "0:0"   # root to access the mounted docker.sock
     depends_on:
       postgres:
         condition: service_healthy
@@ -206,7 +206,7 @@ services:
         condition: service_healthy
     networks: [cinemetrics]
 
-  # ============================================================== SERVING (API ML, bônus)
+  # ============================================================== SERVING (ML API, bonus)
   api:
     build:
       context: ./serving/api
@@ -221,7 +221,7 @@ services:
         condition: service_healthy
     networks: [cinemetrics]
 
-  # ============================================================== MONITORING (bônus)
+  # ============================================================== MONITORING (bonus)
   prometheus:
     image: prom/prometheus:latest
     container_name: cinemetrics-prometheus

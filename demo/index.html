@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CineMetrics — Painel de Demonstração</title>
+<title>CineMetrics — Demo Panel</title>
 <style>
   :root{
     --bg:#0f1117; --surface:#171a23; --surface2:#1e222e; --line:#2a2f3d;
@@ -59,69 +59,69 @@
 <div class="wrap">
   <header>
     <h1>Cine<span class="dot">Metrics</span></h1>
-    <span class="sub">Painel de Demonstração — Pipeline de Engenharia de Dados</span>
+    <span class="sub">Demo Panel — Data Engineering Pipeline</span>
   </header>
 
   <div class="stats">
-    <div class="stat"><b>100.836</b><span>ratings reais (MovieLens)</span></div>
-    <div class="stat"><b>9.742</b><span>filmes no catálogo</span></div>
-    <div class="stat"><b>3</b><span>camadas (bronze/silver/gold)</span></div>
-    <div class="stat"><b>8</b><span>ferramentas integradas</span></div>
+    <div class="stat"><b>100,836</b><span>real ratings (MovieLens)</span></div>
+    <div class="stat"><b>9,742</b><span>movies in the catalog</span></div>
+    <div class="stat"><b>3</b><span>layers (bronze/silver/gold)</span></div>
+    <div class="stat"><b>8</b><span>integrated tools</span></div>
   </div>
 
   <div class="pipe">
-    <span class="step">Fontes (MovieLens + Kafka)</span><span class="arr">&rsaquo;</span>
-    <span class="step">Ingestão</span><span class="arr">&rsaquo;</span>
+    <span class="step">Sources (MovieLens + Kafka)</span><span class="arr">&rsaquo;</span>
+    <span class="step">Ingestion</span><span class="arr">&rsaquo;</span>
     <span class="step">Data Lake (MinIO + Delta)</span><span class="arr">&rsaquo;</span>
     <span class="step">Spark + dbt</span><span class="arr">&rsaquo;</span>
     <span class="step">Serving (Metabase + API)</span>
   </div>
 
-  <h2>Serviços (clique para abrir)</h2>
+  <h2>Services (click to open)</h2>
   <div class="grid">
     <a class="card star" href="http://localhost:3000/dashboard/2" target="_blank">
-      <span class="tag t-bi">Consumo / BI</span>
+      <span class="tag t-bi">Consumption / BI</span>
       <h3>Dashboard (Metabase)</h3>
-      <p>O produto de dados: top filmes, popularidade por gênero e atividade no tempo. Comece a demo por aqui.</p>
-      <span class="open">Abrir dashboard &rarr;</span>
+      <p>The data product: top movies, popularity by genre and activity over time. Start the demo here.</p>
+      <span class="open">Open dashboard &rarr;</span>
       <span class="creds">admin@cinemetrics.local · Cinemetrics2026</span>
     </a>
 
     <a class="card" href="http://localhost:8080" target="_blank">
-      <span class="tag t-orq">Orquestração</span>
+      <span class="tag t-orq">Orchestration</span>
       <h3>Airflow</h3>
-      <p>O pipeline rodando: DAG ingest → bronze/silver/gold → testes de qualidade. Mostre o grafo verde.</p>
-      <span class="open">Abrir Airflow &rarr;</span>
+      <p>The pipeline in action: DAG ingest → bronze/silver/gold → data quality tests. Show the green graph.</p>
+      <span class="open">Open Airflow &rarr;</span>
       <span class="creds">admin · admin</span>
     </a>
 
     <a class="card" href="http://localhost:9001" target="_blank">
       <span class="tag t-lake">Data Lake</span>
       <h3>MinIO (S3)</h3>
-      <p>O medalhão em Delta Lake: buckets bronze, silver e gold com os dados em cada camada.</p>
-      <span class="open">Abrir console &rarr;</span>
+      <p>The Delta Lake medallion: bronze, silver and gold buckets with the data in each layer.</p>
+      <span class="open">Open console &rarr;</span>
       <span class="creds">minioadmin · minioadmin</span>
     </a>
 
     <a class="card" href="http://localhost:8000/docs" target="_blank">
       <span class="tag t-api">Serving / API</span>
       <h3>FastAPI (Swagger)</h3>
-      <p>Consumo programático do gold: /genres, /top-movies, /activity. Endpoints clicáveis ao vivo.</p>
-      <span class="open">Abrir Swagger &rarr;</span>
-      <span class="creds">sem login</span>
+      <p>Programmatic access to gold: /genres, /top-movies, /activity. Live, clickable endpoints.</p>
+      <span class="open">Open Swagger &rarr;</span>
+      <span class="creds">no login</span>
     </a>
 
     <a class="card" href="http://localhost:3001" target="_blank">
-      <span class="tag t-mon">Monitoramento</span>
+      <span class="tag t-mon">Monitoring</span>
       <h3>Grafana</h3>
-      <p>Observabilidade: métricas do banco via Prometheus. (Subir só se o perfil monitoring estiver ligado.)</p>
-      <span class="open">Abrir Grafana &rarr;</span>
+      <p>Observability: database metrics via Prometheus. (Available only when the monitoring profile is running.)</p>
+      <span class="open">Open Grafana &rarr;</span>
       <span class="creds">admin · admin</span>
     </a>
   </div>
 
   <footer>
-    <span>Lucas Leandro Wall Bruno (RA 22251965) · Jamille Rocha Ghazaleh (RA 22304304) — UniCEUB</span>
+    <span>Lucas Leandro Wall Bruno (Student ID 22251965) · Jamille Rocha Ghazaleh (Student ID 22304304) — UniCEUB</span>
     <a href="https://github.com/lucas-wall/cinemetrics" target="_blank">github.com/lucas-wall/cinemetrics</a>
   </footer>
 </div>
